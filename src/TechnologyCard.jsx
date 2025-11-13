@@ -1,6 +1,7 @@
 import './TechnologyCard.css';
+import TechnologyNotes from './TechnologyNotes';
 
-function TechnologyCard({ technology, onStatusChange }) {
+function TechnologyCard({ technology, onStatusChange, onNotesChange }) {
     const getStatusText = (status) => {
         switch(status) {
             case 'completed': return 'Завершено';
@@ -33,12 +34,29 @@ function TechnologyCard({ technology, onStatusChange }) {
         <div 
             className={`technology-card ${getStatusClass(technology.status)}`}
             onClick={handleClick}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleClick();
+                }
+            }}
         >
             <h3>{technology.title}</h3>
             <p>{technology.description}</p>
             <div className="status">
                 Статус: <strong>{getStatusText(technology.status)}</strong>
             </div>
+
+            {/* Заметки: передаём колбэк onNotesChange (если он есть) */}
+            {typeof onNotesChange === 'function' && (
+                <TechnologyNotes
+                    notes={technology.notes || ''}
+                    onNotesChange={onNotesChange}
+                    techId={technology.id}
+                />
+            )}
         </div>
     );
 }
