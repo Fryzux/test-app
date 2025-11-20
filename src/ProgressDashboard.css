@@ -1,0 +1,6 @@
+.progress-dashboard{max-width:900px;margin:0 auto;padding:16px}
+.section-row{display:flex;gap:12px;margin-top:12px}
+.weekly-progress{margin-top:18px;background:#fafafa;padding:12px;border-radius:8px}
+.week-item{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.week-label{min-width:80px;font-size:14px;color:#666}
+.week-percentage{min-width:40px;font-weight:600;color:#333}

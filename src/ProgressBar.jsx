@@ -1,0 +1,23 @@
+import './ProgressBar.css';
+
+function ProgressBar({ progress = 0, label = '', color = '#4CAF50', height = 16, showPercentage = true, animated = false }) {
+  const normalized = Math.max(0, Math.min(100, progress));
+  return (
+    <div className="progress-bar-container">
+      {(label || showPercentage) && (
+        <div className="progress-bar-header">
+          {label && <span className="progress-label">{label}</span>}
+          {showPercentage && <span className="progress-percentage">{normalized}%</span>}
+        </div>
+      )}
+      <div className="progress-bar-outer" style={{ height: `${height}px` }}>
+        <div
+          className={`progress-bar-inner ${animated ? 'animated' : ''}`}
+          style={{ width: `${normalized}%`, backgroundColor: color }}
+        />
+      </div>
+    </div>
+  );
+}
+
+export default ProgressBar;

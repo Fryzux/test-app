@@ -1,170 +1,124 @@
 import './App.css';
-import { useState, useEffect } from 'react';
+import useTechnologies from './useTechnologies';
 import ProgressHeader from './ProgressHeader';
 import QuickActions from './QuickActions';
 import FilterTabs from './FilterTabs';
 import TechnologyCard from './TechnologyCard';
+import ProgressBar from './ProgressBar';
+import { useState } from 'react';
 
 function App() {
-    // Начальное состояние технологий (обратите внимание: добавлено поле notes)
-    const [technologies, setTechnologies] = useState([
-        {
-            id: 1,
-            title: 'React Components',
-            description: 'Изучение базовых компонентов',
-            status: 'completed',
-            notes: ''
-        },
-        {
-            id: 2,
-            title: 'JSX Syntax',
-            description: 'Освоение синтаксиса JSX',
-            status: 'not-started',
-            notes: ''
-        },
-        {
-            id: 3,
-            title: 'State Management',
-            description: 'Работа с состоянием компонентов',
-            status: 'not-started',
-            notes: ''
-        }
-    ]);
+  // Берём все операции и данные из кастомного хука (работает через localStorage)
+  const {
+    technologies,
+    updateStatus,
+    updateNotes,
+    markAllCompleted,
+    resetAll,
+    progress
+  } = useTechnologies();
 
-    const [activeFilter, setActiveFilter] = useState('all');
-    const [searchQuery, setSearchQuery] = useState('');
+  // Локальные UI состояния (фильтр и поиск)
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
-    // --- localStorage: загрузка при старте ---
-    useEffect(() => {
-        try {
-            const saved = localStorage.getItem('techTrackerData');
-            if (saved) {
-                setTechnologies(JSON.parse(saved));
-                console.log('Данные загружены из localStorage');
-            }
-        } catch (err) {
-            console.error('Ошибка загрузки из localStorage', err);
-        }
-    }, []);
+  // Обёртки-колбэки для передачи в дочерние компоненты
+  const handleStatusChange = (id, newStatus) => updateStatus(id, newStatus);
+  const handleNotesChange = (id, notes) => updateNotes(id, notes);
+  const handleMarkAllCompleted = () => markAllCompleted();
+  const handleResetAll = () => resetAll();
 
-    // --- localStorage: автосохранение при изменении technologies ---
-    useEffect(() => {
-        try {
-            localStorage.setItem('techTrackerData', JSON.stringify(technologies));
-            // console.log('Данные сохранены в localStorage');
-        } catch (err) {
-            console.error('Ошибка сохранения в localStorage', err);
-        }
-    }, [technologies]);
+  // Случайный выбор — оставляем прежнюю логику, но используем updateStatus
+  const handleRandomNext = () => {
+    const notStarted = technologies.filter(t => t.status === 'not-started');
 
-    // Функция изменения статуса технологии
-    const handleStatusChange = (id, newStatus) => {
-        setTechnologies(prev => 
-            prev.map(tech => 
-                tech.id === id ? { ...tech, status: newStatus } : tech
-            )
-        );
-    };
+    if (notStarted.length > 0) {
+      const randomTech = notStarted[Math.floor(Math.random() * notStarted.length)];
 
-    // Обновление заметок
-    const updateTechnologyNotes = (techId, newNotes) => {
-        setTechnologies(prevTech => 
-            prevTech.map(tech => 
-                tech.id === techId ? { ...tech, notes: newNotes } : tech
-            )
-        );
-    };
+      // Обновляем статус (хук сохранит данные в localStorage)
+      updateStatus(randomTech.id, 'in-progress');
 
-    // Быстрые действия
-    const handleMarkAllCompleted = () => {
-        setTechnologies(prev => 
-            prev.map(tech => ({ ...tech, status: 'completed' }))
-        );
-    };
+      // Асинхронный alert, чтобы UI успел обновиться
+      setTimeout(() => {
+        alert(`Следующая технология: ${randomTech.title}`);
+      }, 0);
+    } else {
+      setTimeout(() => {
+        alert('Все технологии уже начаты или завершены!');
+      }, 0);
+    }
+  };
 
-    const handleResetAll = () => {
-        setTechnologies(prev => 
-            prev.map(tech => ({ ...tech, status: 'not-started' }))
-        );
-    };
+  // Фильтрация + поиск (UI-side)
+  const filteredTechnologies = technologies
+    .filter(tech => (activeFilter === 'all' ? true : tech.status === activeFilter))
+    .filter(tech => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        tech.title.toLowerCase().includes(q) ||
+        tech.description.toLowerCase().includes(q)
+      );
+    });
 
-    const handleRandomNext = () => {
-        const notStarted = technologies.filter(t => t.status === 'not-started');
+  return (
+    <div className="App">
+      <header style={{ padding: 12 }}>
+        <h1 style={{ margin: 0 }}>Трекер изучения технологий</h1>
 
-        if (notStarted.length > 0) {
-            const randomTech = notStarted[Math.floor(Math.random() * notStarted.length)];
-
-            // Сначала обновляем состояние (React начнёт ререндер)
-            handleStatusChange(randomTech.id, 'in-progress');
-
-            // Вызываем alert асинхронно — даём React отрисовать изменения
-            setTimeout(() => {
-                alert(`Следующая технология: ${randomTech.title}`);
-            }, 0);
-
-        } else {
-            setTimeout(() => {
-                alert('Все технологии уже начаты или завершены!');
-            }, 0);
-        }
-    };
-
-    // Фильтрация + поиск
-    const filteredTechnologies = technologies
-        .filter(tech => {
-            if (activeFilter === 'all') return true;
-            return tech.status === activeFilter;
-        })
-        .filter(tech => {
-            if (!searchQuery.trim()) return true;
-            const q = searchQuery.toLowerCase();
-            return (
-                tech.title.toLowerCase().includes(q) ||
-                tech.description.toLowerCase().includes(q)
-            );
-        });
-
-    return (
-        <div className="App">
-            <ProgressHeader technologies={technologies} />
-            <QuickActions 
-                onMarkAllCompleted={handleMarkAllCompleted}
-                onResetAll={handleResetAll}
-                onRandomNext={handleRandomNext}
-            />
-
-            <div style={{ margin: '12px 0', display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div className="search-box" style={{ flex: 1 }}>
-                    <input
-                        type="text"
-                        placeholder="Поиск технологий..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        style={{ width: '100%', padding: '8px' }}
-                    />
-                </div>
-                <div style={{ minWidth: 140, textAlign: 'right' }}>
-                    Найдено: <strong>{filteredTechnologies.length}</strong>
-                </div>
-            </div>
-
-            <FilterTabs 
-                activeFilter={activeFilter}
-                onFilterChange={setActiveFilter}
-            />
-            
-            <div className="technologies-list">
-                {filteredTechnologies.map(tech => (
-                    <TechnologyCard
-                        key={tech.id}
-                        technology={tech}
-                        onStatusChange={handleStatusChange}
-                        onNotesChange={updateTechnologyNotes} // передаём колбэк для заметок
-                    />
-                ))}
-            </div>
+        {/* общий прогресс */}
+        <div style={{ marginTop: 12 }}>
+          <ProgressBar progress={progress} label="Общий прогресс" animated={true} />
         </div>
-    );
+
+        {/* Опционально — оставляем ProgressHeader (если он показывает дополнительную статистику) */}
+        <div style={{ marginTop: 12 }}>
+          <ProgressHeader technologies={technologies} />
+        </div>
+      </header>
+
+      <main style={{ padding: 12 }}>
+        {/* Быстрые действия — теперь передаём весь массив, чтобы экспорт/модалки работали */}
+        <QuickActions
+          onMarkAllCompleted={handleMarkAllCompleted}
+          onResetAll={handleResetAll}
+          onRandomNext={handleRandomNext}
+          technologies={technologies}
+        />
+
+        {/* Поиск + счётчик */}
+        <div style={{ margin: '12px 0', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="search-box" style={{ flex: 1 }}>
+            <input
+              type="text"
+              placeholder="Поиск технологий..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ width: '100%', padding: '8px' }}
+            />
+          </div>
+          <div style={{ minWidth: 140, textAlign: 'right' }}>
+            Найдено: <strong>{filteredTechnologies.length}</strong>
+          </div>
+        </div>
+
+        {/* Фильтры */}
+        <FilterTabs activeFilter={activeFilter} onFilterChange={setActiveFilter} />
+
+        {/* Сетка карточек */}
+        <div className="technologies-list" style={{ marginTop: 12, display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
+          {filteredTechnologies.map(tech => (
+            <TechnologyCard
+              key={tech.id}
+              technology={tech}
+              onStatusChange={handleStatusChange}
+              onNotesChange={handleNotesChange}
+            />
+          ))}
+        </div>
+      </main>
+    </div>
+  );
 }
 
 export default App;
